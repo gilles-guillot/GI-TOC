@@ -1,0 +1,180 @@
+---
+title: "Exploratory Data Analyses"
+format: revealjs
+editor: visual
+author: "Gilles Guillot, PhD"
+---
+
+# Illegal wild trade ad data
+
+## 
+
+```{r,echo=FALSE}
+library(tidyverse)
+iwt = readxl::read_excel("./IWT_test_data.xlsx")
+# shorter variable names
+iwt = iwt %>% rename(website=`website/name`,
+                             type = `sale-item/type`,
+                             species = `sale-item/species`,
+                             taxa = `sale-item/taxa` , 
+                             sold_in = `sold-in`,
+                             CITES = `sale-item/CITES`)
+# type in species names
+iwt = iwt %>% mutate(species = fct_collapse(species, 
+                                            Bear = c('bear','Bear')))
+iwt = iwt %>% mutate(species = fct_collapse(species, 
+                                            `Radiated Tortoise` = c('Radiated tortoise','Radiated Tortoise')))
+
+```
+
+* Products mostly advertised on Facebook
+* Products mostly sold in  Thailand
+* Top species include Elephant, Tiger & Bear
+
+```{r, echo = FALSE}
+iwt %>% 
+  ggplot(aes(y=species,fill=website)) + 
+  geom_bar() + 
+  facet_wrap(~ sold_in)
+
+```
+
+## 
+
+Marked seasonal trend in Thailand
+
+```{r}
+iwt %>% group_by(sold_in, month) %>% 
+  summarise(n=n()) %>% 
+  mutate(month = factor(month,levels = c('August','September', 'October'))) %>% 
+ ggplot(aes(x=month , y=n, col=sold_in)) +
+  geom_point(size=5,alpha=.7)
+```
+
+
+
+## Other potentially informative data
+
+
+* Weight, size, volume, # animals involved
+* Website sampling/census strategy
+* Price
+* Clue that transaction took place
+
+## Conclusions: 
+
+* Policy implications: target effort on Thailand in October
+
+* Data visualization plan: 
+   + Elicit research question
+   + Translate research question into statistical relations
+   + Play with ggplot() *ad libitum*
+
+
+# Brazil deforestation data
+
+
+
+```{r,echo =FALSE}
+# data loading and formatting
+library(pacman)
+p_load("geobr")
+library(geobr)
+library(sf)
+
+# forest_dat municipalities
+forest_dat = readxl::read_excel("./Brazilian_Municipalities_test_data.xlsx")
+
+# downloading Brazil geographical data
+muni <- geobr::read_municipality(  code_muni = "all",
+                            year=2020, 
+                            showProgress = FALSE)
+my_list_muni = unique(forest_dat$municipality_code)
+my_muni = muni %>% filter(code_muni %in% my_list_muni)
+
+
+# map Brazil + GI_TOC test data
+my_muni = my_muni %>% rename(municipality_code = code_muni)
+
+
+# merging geobr data and GI_TOC test data
+dat = full_join(x = forest_dat , y = my_muni, by = "municipality_code") %>% 
+  st_as_sf()
+
+# Computing new variables
+dat = dat %>% mutate(municipality_area = st_area(geom)) %>% 
+  mutate(municipality_area_km2 = as.vector(municipality_area/1e+6)) %>% 
+  mutate(deforestation_rate = 100*deforestation_km2 / municipality_area_km2) %>% 
+  mutate(pop_density = count_population / municipality_area_km2) %>% 
+  mutate(rural_conflicts_per_1000inhab = 1000 * count_rural_conflicts / count_population) %>% 
+  mutate(rural_conflicts_per_km2 = count_rural_conflicts / municipality_area_km2)
+
+```
+
+## Study area: Amazon basin
+```{r}
+ggplot() + 
+  geom_sf(data = muni, color=NA, fill = 'forestgreen') + 
+  geom_sf(data=my_muni,fill ="dodgerblue3")
+```
+
+
+## Choosing the right denominator
+
+* Municipality  surfaces are highly variable
+* Deforestation surface has to be scaled to municipality surface:
+$$ \mbox{Deforestation rate} = \frac{ \mbox{Deforested surface}}{ \mbox{Municipality surface}} \times 100$$
+
+* What is the right denominator to scale  rural conflicts?
+
+
+## Spatial variation of deforestation and  rural conflict rates 
+
+```{r}
+# map defor rate and rural conflict rate
+dat %>% select(deforestation_rate,rural_conflicts_per_1000inhab,geom) %>% 
+  pivot_longer(cols=c("deforestation_rate","rural_conflicts_per_1000inhab")) %>% 
+ggplot() + 
+  geom_sf(aes(fill = value)) +
+  facet_wrap(~name) + 
+  scale_fill_distiller(palette = "Spectral")
+```
+
+## Deforestation vs. rural conflict rates 
+
+```{r}
+dat %>% ggplot(aes(x=deforestation_rate, y = rural_conflicts_per_1000inhab)) +  
+  geom_point(size=4,alpha=.3, col="red4") + 
+  xlab("Deforestation rate (%)") + 
+  ylab("Rural conflicts per 1000 inhabitant") + 
+  scale_x_log10() + 
+   scale_y_log10() 
+
+```
+
+## Auxiliary analyses
+
+* Deforestation is "easy" to detect and monitor from remote sensing data
+
+* Is there an association between deforestation and (other) criminal activities, e.g.
+   + deforestation ~ count_homicide
+    + deforestation ~ count_seizures_CITES
+    
+
+## Selected publications
+
+*  Population dynamics of species-rich ecosystems: the mixture of matrix population models approach. In: [Methods in Ecology and Evolution 4.4 (2013), pp. 316–326.](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210x.12019)
+*  Les éléphants en danger. In: [Brèves de maths: Mathématiques pour la planète terre. Nouveau Monde éditions](http://www.breves-de-maths.fr/les-elephants-en-danger/), 2014.
+* Statistical methods in spatial genetics. In: [Molecular Ecology 18 (2009), pp. 4734–4756](https://onlinelibrary.wiley.com/doi/10.1111/j.1365-294X.2009.04410.x). 
+
+## Selected publications (cont')
+
+* Accurate continuous geographic assignment from low-to high-density SNP data. In:
+[Bioinformatics 32.7 (2016), pp. 1106–1108](https://academic.oup.com/bioinformatics/article/32/7/1106/1744090).
+*  Enhancing and comparing methods for the detection of fishing activity from Vessel Monitoring System data. In: [arXiv preprint arXiv:1708.09663 (2017)](https://arxiv.org/abs/1708.09663).
+
+
+
+# Thank you for your attention!
+
+All data  material available from my github repository[github.com/gilles-guillot/GI-TOC](https://github.com/gilles-guillot/GI-TOC)
