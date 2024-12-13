@@ -53,7 +53,7 @@ iwt %>% group_by(sold_in, month) %>%
 
 
 
-## Other potentially informative data
+## Caveat / other potentially informative data
 
 
 * Weight, size, volume, # animals involved
@@ -67,7 +67,7 @@ iwt %>% group_by(sold_in, month) %>%
 
 * Data visualization plan: 
    + Elicit research question
-   + Translate research question into statistical relations
+   + Translate research question into statistical questions
    + Play with ggplot() *ad libitum*
 
 
@@ -177,4 +177,4 @@ dat %>% ggplot(aes(x=deforestation_rate, y = rural_conflicts_per_1000inhab)) +
 
 # Thank you for your attention!
 
-All data  material available from my github repository[github.com/gilles-guillot/GI-TOC](https://github.com/gilles-guillot/GI-TOC)
+All data  material available from my github repository  [github.com/gilles-guillot/GI-TOC](https://github.com/gilles-guillot/GI-TOC)
